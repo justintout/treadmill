@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🏃‍♂️ Treadmill Controller</title>
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h1>Treadmill Controller</h1>
+
+    <div class="warn hidden" id="warn-no-blueooth">
+      Web Bluetooth isn't available. Ensure you're on Chrome (or a Chromium
+      derivative) and have the Experimental Web Platform Features enabled. See
+      note below.
+    </div>
+
+    <aside>
+      This was tested with
+      <a
+        href="https://www.amazon.com/dp/B0CHHKC94J?psc=1&ref=ppx_yo2ov_dt_b_product_details"
+        >this specific treadmill</a
+      >. It seems to conform to the
+      <a
+        href="https://www.bluetooth.com/specifications/specs/fitness-machine-profile-1-0/"
+        >Bluetooth Fitness Machine Profile</a
+      >. Most treadmills that follow this spec work <em>in theory</em>. I make
+      no guarantees and certainly accept no responsibility if you use this
+      project. It is a proof of concept.
+    </aside>
+
+    <aside>
+      You must enable Chrome's
+      <a href="chrome://flags/#enable-experimental-web-platform-features"
+        >Experimental Web Platform Features</a
+      >
+      for any of this to work.
+    </aside>
+
+    <main>
+      <section id="controls">
+        <div id="controls-device">
+          Connected to:
+          <strong><span id="controls-device-name">nothing</span></strong>
+        </div>
+        <div id="controls-connection">
+          <button id="controls-connect" disabled>Connect</button>
+          <button id="controls-disconnect" class="hidden" disabled>
+            Disconnect
+          </button>
+        </div>
+      </section>
+      <section id="data">
+        <aside>
+          Reported kcal burnt is directly from the device, so it is inaccurate.
+          A calculator will be implemented to get more accurate kcal estimates.
+        </aside>
+        <div id="data-current">
+          <div>Current speed: <span id="data-current-speed">0</span> mph</div>
+          <div>
+            Total distance:
+            <span id="data-current-distance">0</span> miles
+          </div>
+          <div>Elapsed time: <span id="data-current-time">0:00:00</span></div>
+          <div>
+            Expended energy:
+            <span id="data-current-kcal">0</span> kcal
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+  <script src="index.ts" type="module"></script>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "treadmill",
+  "version": "0.0.1",
+  "description": "",
+  "source": "src/index.html",
+  "scripts": {
+    "start": "parcel",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Justin Tout",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/web-bluetooth": "^0.0.20",
+    "parcel": "^2.11.0",
+    "typescript": "^5.3.3"
+  }
+}
