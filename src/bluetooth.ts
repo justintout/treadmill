@@ -47,7 +47,7 @@ export async function connect(d: BluetoothDevice) {
 }
 
 export async function disconnect(d?: BluetoothDevice) {
-  if (d?.gatt?.connected) d.gatt.disconnect;
+  d?.gatt?.disconnect;
 }
 
 export async function discover(
@@ -144,7 +144,8 @@ type TreadmillNotificationFlags = {
   forceOnBeltAndPowerOutput: boolean;
 };
 
-type TreadmillNotificationData = {
+// TODO: zeros or nulls/undefined for fields not present?
+export type TreadmillNotificationData = {
   instantaneousSpeed: number;
   averageSpeed: number;
   totalDistance: number;
@@ -305,5 +306,98 @@ export function parseTreadmillNotification(
     remainingTime,
     forceOnBelt,
     powerOutput,
+  };
+}
+
+// Training Status - FTMS 4.10
+type TrainingStatusNotificationFlags = {
+  statusString: boolean;
+  extendedString: boolean; // note: long-read not supported
+};
+
+export type TrainingStatusNotificationData = {
+  status: number;
+  statusString: string;
+  stringFromStatus: string;
+};
+
+const TrainingStatusNotificationFieldLength = {
+  FLAGS: 1,
+  TRAINING_STATUS: 1,
+};
+
+// FTMS 4.10.1.2
+function trainingStatusFieldState(v: number) {
+  switch (v) {
+    case 0x00:
+      return "Other";
+    case 0x01:
+      return "Idle";
+    case 0x02:
+      return "Warming Up";
+    case 0x03:
+      return "Low Intensity Interval";
+    case 0x04:
+      return "High Intensity Interval";
+    case 0x05:
+      return "Recovery Interval";
+    case 0x06:
+      return "Isometric";
+    case 0x07:
+      return "Heart Rate Control";
+    case 0x08:
+      return "Fitness Test";
+    case 0x09:
+      return "Speed Outside of Control Region - Low (increase speed to return to controllable region)";
+    case 0x0a:
+      return "Speed outside of Control Region - High (decrease speed to return to controllable region)";
+    case 0x0b:
+      return "Cool Down";
+    case 0x0c:
+      return "Watt Control";
+    case 0x0d:
+      return "Manual Mode (Quick Start)";
+    case 0x0e:
+      return "Pre-Workout";
+    case 0x0f:
+      return "Post-Workout";
+    default:
+      return "Reserved for Future Use";
+  }
+}
+
+function parseTrainingStatusNotificationFlags(
+  v: number
+): TrainingStatusNotificationFlags {
+  return {
+    statusString: (v & (1 << 0)) != 1,
+    extendedString: (v & (1 << 1)) != 0,
+  };
+}
+
+export function parseTrainingStatusNotification(
+  v: DataView
+): TrainingStatusNotificationData {
+  let pos = 0;
+  const flags = parseTrainingStatusNotificationFlags(v.getUint8(pos));
+  pos += TrainingStatusNotificationFieldLength.FLAGS;
+  const status = v.getUint8(pos);
+  const stringFromStatus = trainingStatusFieldState(status);
+  pos += TrainingStatusNotificationFieldLength.TRAINING_STATUS;
+  let statusString = "";
+  if (flags.statusString) {
+    if (flags.extendedString) {
+      console.warn(
+        "training status notification received with extended string. long-read not supported. reading only current notification."
+      );
+    }
+    const d = new TextDecoder();
+    statusString = d.decode(new DataView(v.buffer, v.byteOffset + pos));
+  }
+
+  return {
+    status,
+    statusString,
+    stringFromStatus,
   };
 }

@@ -14,5 +14,8 @@
     "@types/web-bluetooth": "^0.0.20",
     "parcel": "^2.11.0",
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "dexie": "^3.2.5"
   }
 }
