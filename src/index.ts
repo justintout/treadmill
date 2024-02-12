@@ -77,9 +77,12 @@ function onTreadmillDisconnected() {
   connectButton.disabled = false;
 }
 
-function onTrainingStatusChanged(e: Event) {
-  const d = e as unknown as TrainingStatusEvent;
-  currentStatus.textContent = d.detail.stringFromStatus;
+function trainingStatusEventListener(worker: Worker) {
+  return (e: Event) => {
+    const d = e as unknown as TrainingStatusEvent;
+    worker.postMessage(d.detail);
+    currentStatus.textContent = d.detail.stringFromStatus;
+  };
 }
 
 (async function () {
@@ -96,7 +99,10 @@ function onTrainingStatusChanged(e: Event) {
     "treadmilldata",
     treadmillDataEventListener(worker)
   );
-  document.addEventListener("trainingstatuschanged", onTrainingStatusChanged);
+  document.addEventListener(
+    "trainingstatuschanged",
+    trainingStatusEventListener(worker)
+  );
   connectButton.addEventListener("click", connectButtonClickListener(worker));
   disconnectButton.addEventListener("click", () => {
     treadmill?.disconnect();
