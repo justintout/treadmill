@@ -9,6 +9,7 @@ import {
   parseTrainingStatusNotification,
   parseTreadmillNotification,
 } from "./bluetooth";
+import { TreadmillDatabase } from "./storage";
 
 export type Session = {
   id?: number; // autoincremented by Dexie
@@ -28,6 +29,7 @@ export type TreadmillData = {
   timestamp: number;
   speed: number;
   distance: number;
+  elapsedTime: number;
   formattedTime: string;
   kcal: number;
 };
@@ -75,6 +77,9 @@ export class Treadmill {
   gatt?: BluetoothRemoteGATTServer;
   profile?: DeviceProfile;
 
+  sessionStarted?: number;
+  lastData?: TreadmillData;
+
   private _status: SupportedTrainingStatus = "Idle";
   get status(): SupportedTrainingStatus {
     return this._status;
@@ -117,6 +122,22 @@ export class Treadmill {
 
     try {
       this.status = await this.readTrainingStatus();
+      // if the status is not idle, we connected mid-session
+      // we need to set the session start time by catching the next
+      // treadmill data and using it to derive start time
+      if (this.status !== "Idle")
+        this.profile.fitnessMachine.treadmillData.addEventListener(
+          "characteristicvaluechanged",
+          (_e) => {
+            const e = _e as unknown as BluetoothRemoteGATTNotificationEvent;
+            const data = toTreadmillData(
+              parseTreadmillNotification(e.target.value)
+            );
+            this.sessionStarted = Date.now() - data.elapsedTime * 1000;
+          },
+          // @ts-expect-error
+          { once: true }
+        );
     } catch (e) {
       console.error("could not initialize treadmill status: ", e);
     }
@@ -151,16 +172,51 @@ export class Treadmill {
       return;
     }
     const data = toTreadmillData(parseTreadmillNotification(e.target.value));
+    if (this.status === "Manual Mode (Quick Start)") {
+      this.lastData = data;
+    }
     document.dispatchEvent(new CustomEvent("treadmilldata", { detail: data }));
   }
 
-  onTrainingStatusNotification(_e: Event) {
+  async onTrainingStatusNotification(_e: Event) {
     const e = _e as unknown as BluetoothRemoteGATTNotificationEvent;
     try {
       const data = toTrainingStatus(
         parseTrainingStatusNotification(e.target.value)
       );
       this.status = data;
+      if (data.stringFromStatus === "Pre-Workout") {
+        this.sessionStarted = data.timestamp;
+      }
+      if (data.stringFromStatus === "Post-Workout") {
+        // if we don't have a last notification, we're kinda screwed.
+        // TODO: handle this
+        if (!this.lastData) {
+          console.error("no previous notification available to finish session");
+          return;
+        }
+        // session is ended. box up a new session and send it off
+        // if we haven't found a start time at this point, derive it from the
+        // last notification
+        // TODO: listen for the 'Idle' status event once to get the last notification of the session
+        if (!this.sessionStarted) {
+          this.sessionStarted = Date.now() - this.lastData?.elapsedTime * 1000;
+        }
+        const session: Session = {
+          started: this.sessionStarted,
+          ended: data.timestamp,
+          distance: this.lastData.distance,
+          duration: this.lastData.elapsedTime,
+          energyExpended: this.lastData.kcal, // TODO: don't trust treadmill calculated kcal, use our calc
+          averageSpeed: await averageSpeed(
+            this.sessionStarted,
+            this.lastData.timestamp
+          ),
+        };
+        document.dispatchEvent(
+          new CustomEvent("sessionended", { detail: session })
+        );
+      }
     } catch (e) {
       console.error(e);
       return;
@@ -186,6 +242,7 @@ function toTreadmillData(d: TreadmillNotificationData): TreadmillData {
     speed: kmphToMph(d.instantaneousSpeed),
     distance: metersToMiles(d.totalDistance),
     formattedTime: formatTime(d.elapsedTime),
+    elapsedTime: d.elapsedTime,
     kcal: d.totalEnergy,
   };
 }
@@ -201,4 +258,14 @@ function toTrainingStatus(d: TrainingStatusNotificationData): TrainingStatus {
   throw new Error(
     `cannot convert unsupported training status: ${d.stringFromStatus}`
   );
+}
+
+async function averageSpeed(start: number, end: number) {
+  const db = new TreadmillDatabase();
+  const points = await db.treadmillData
+    .where("timestamp")
+    .between(start, end)
+    .toArray();
+  console.log(points);
+  return points.map((p) => p.speed).reduce((s, v) => s + v, 0) / points.length;
 }

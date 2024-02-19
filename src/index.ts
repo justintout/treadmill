@@ -4,12 +4,14 @@ import {
   Treadmill,
   TreadmillConnectedEvent,
   TrainingStatusEvent,
+  SessionEndedEvent,
 } from "./treadmill";
 
 const noBluetoothDivID = "warn-no-blueooth";
 const deviceNameID = "controls-device-name";
 const connectButtonID = "controls-connect";
 const disconnectButtonID = "controls-disconnect";
+const dataSectionID = "data";
 const currentStatusID = "data-current-status";
 const currentSpeedID = "data-current-speed";
 const currentDistanceID = "data-current-distance";
@@ -19,6 +21,7 @@ const currentKcalID = "data-current-kcal";
 const deviceName = findElement<HTMLSpanElement>(deviceNameID);
 const connectButton = findElement<HTMLButtonElement>(connectButtonID);
 const disconnectButton = findElement<HTMLButtonElement>(disconnectButtonID);
+const dataSection = findElement<HTMLAreaElement>(dataSectionID);
 const currentStatus = findElement<HTMLSpanElement>(currentStatusID);
 const currentSpeed = findElement<HTMLSpanElement>(currentSpeedID);
 const currentDistance = findElement<HTMLSpanElement>(currentDistanceID);
@@ -46,6 +49,7 @@ function connectButtonClickListener(worker: Worker) {
       const d = await getDevice();
       treadmill = new Treadmill(d);
       await treadmill.connect();
+      dataSection.classList.remove("hidden");
       deviceName.textContent = treadmill.name;
       connectButton.classList.add("hidden");
       disconnectButton.disabled = false;
@@ -71,6 +75,7 @@ function treadmillDataEventListener(worker: Worker) {
 function onTreadmillDisconnected() {
   treadmill = null;
   deviceName.textContent = "nothing";
+  dataSection.classList.add("hidden");
   disconnectButton.disabled = true;
   disconnectButton.classList.add("hidden");
   connectButton.classList.remove("hidden");
@@ -82,7 +87,26 @@ function trainingStatusEventListener(worker: Worker) {
     const d = e as unknown as TrainingStatusEvent;
     worker.postMessage(d.detail);
     currentStatus.textContent = d.detail.stringFromStatus;
+    if (d.detail.stringFromStatus === "Idle") {
+      idle();
+    }
   };
+}
+
+function sessionEndedEventListener(worker: Worker) {
+  return (e: Event) => {
+    const d = e as unknown as SessionEndedEvent;
+    console.log("session ended", d.detail);
+    worker.postMessage(d.detail);
+  };
+}
+
+function idle() {
+  currentStatus.innerText = "Idle";
+  currentSpeed.innerText = "0";
+  currentDistance.innerText = "0";
+  currentTime.innerText = "0";
+  currentKcal.innerText = "0";
 }
 
 (async function () {
@@ -103,6 +127,7 @@ function trainingStatusEventListener(worker: Worker) {
     "trainingstatuschanged",
     trainingStatusEventListener(worker)
   );
+  document.addEventListener("sessionended", sessionEndedEventListener(worker));
   connectButton.addEventListener("click", connectButtonClickListener(worker));
   disconnectButton.addEventListener("click", () => {
     treadmill?.disconnect();
