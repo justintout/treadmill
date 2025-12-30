@@ -5,6 +5,8 @@ export const FitnessMachineService = 0x1826; // 6182; // 0x1826
 export const TreadmillDataCharacteristic = 0x2acd; //10957; // 0x2acd
 export const TrainingStatusCharacteristic = 10963; // 0x2ad3
 export const FitnessMachineStatusCharacteristic = 10970; // 0x2ada
+export const FitnessMachineControlPointCharacteristic = 0x2ad9; // Control Point
+export const FitnessMachineFeatureCharacteristic = 0x2acc; // Fitness Machine Feature
 
 export type BluetoothRemoteGATTNotificationEvent = {
   target: {
@@ -22,6 +24,8 @@ export type DeviceProfile = {
     treadmillData: BluetoothRemoteGATTCharacteristic;
     trainingStatus: BluetoothRemoteGATTCharacteristic;
     fitnessMachineStatus: BluetoothRemoteGATTCharacteristic;
+    controlPoint?: BluetoothRemoteGATTCharacteristic;
+    feature?: BluetoothRemoteGATTCharacteristic;
   };
 };
 
@@ -53,53 +57,194 @@ export async function disconnect(d?: BluetoothDevice) {
 export async function discover(
   s: BluetoothRemoteGATTServer
 ): Promise<DeviceProfile> {
-  let genericAccess: BluetoothRemoteGATTService;
-  let deviceName: BluetoothRemoteGATTCharacteristic;
+  console.log("[BT] Starting service discovery...");
+  console.log("[BT] Device:", s.device.name, "Connected:", s.connected);
+
+  // First, let's see what services are available
   try {
-    genericAccess = await s.getPrimaryService(GenericAccessService);
-    deviceName = await genericAccess.getCharacteristic(
-      DeviceNameCharacteristic
-    );
+    console.log("[BT] Getting primary services...");
+    const services = await s.getPrimaryServices();
+    console.log("[BT] Available services:", services.length);
+    for (const svc of services) {
+      console.log("[BT]   Service UUID:", svc.uuid);
+      try {
+        const chars = await svc.getCharacteristics();
+        for (const char of chars) {
+          console.log("[BT]     Characteristic:", char.uuid, "Properties:", {
+            read: char.properties.read,
+            write: char.properties.write,
+            notify: char.properties.notify,
+            indicate: char.properties.indicate,
+          });
+        }
+      } catch (e) {
+        console.log("[BT]     Could not enumerate characteristics:", e);
+      }
+    }
   } catch (e) {
-    console.error(e);
-    throw new Error(
-      "failed to discover generic access service and associated characteristics"
-    );
+    console.warn("[BT] Could not enumerate services:", e);
+  }
+
+  // Generic Access is optional - device name comes from device.name
+  let genericAccess: BluetoothRemoteGATTService | undefined;
+  let deviceName: BluetoothRemoteGATTCharacteristic | undefined;
+  try {
+    console.log("[BT] Looking for Generic Access Service (0x1800)...");
+    genericAccess = await s.getPrimaryService(GenericAccessService);
+    console.log("[BT] Found Generic Access Service");
+    deviceName = await genericAccess.getCharacteristic(DeviceNameCharacteristic);
+    console.log("[BT] Found Device Name Characteristic");
+  } catch (e) {
+    console.warn("[BT] Generic Access Service not available (this is OK):", e);
   }
 
   let fitnessMachine: BluetoothRemoteGATTService;
   let treadmillData: BluetoothRemoteGATTCharacteristic;
   let trainingStatus: BluetoothRemoteGATTCharacteristic;
-  let fitnessMachineStatus: BluetoothRemoteGATTCharacteristic;
+  let fitnessMachineStatus: BluetoothRemoteGATTCharacteristic | undefined;
+  let controlPoint: BluetoothRemoteGATTCharacteristic | undefined;
+  let feature: BluetoothRemoteGATTCharacteristic | undefined;
+
   try {
+    console.log("[BT] Looking for Fitness Machine Service (0x1826)...");
     fitnessMachine = await s.getPrimaryService(FitnessMachineService);
-    treadmillData = await fitnessMachine.getCharacteristic(
-      TreadmillDataCharacteristic
-    );
-    trainingStatus = await fitnessMachine.getCharacteristic(
-      TrainingStatusCharacteristic
-    );
-    fitnessMachineStatus = await fitnessMachine.getCharacteristic(
-      FitnessMachineStatusCharacteristic
-    );
+    console.log("[BT] Found Fitness Machine Service");
+
+    // List all characteristics in the service
+    try {
+      const chars = await fitnessMachine.getCharacteristics();
+      console.log("[BT] Fitness Machine characteristics:");
+      for (const char of chars) {
+        console.log("[BT]   ", char.uuid, {
+          read: char.properties.read,
+          write: char.properties.write,
+          notify: char.properties.notify,
+          indicate: char.properties.indicate,
+        });
+      }
+    } catch (e) {
+      console.warn("[BT] Could not list characteristics:", e);
+    }
+
+    console.log("[BT] Looking for Treadmill Data (0x2acd)...");
+    treadmillData = await fitnessMachine.getCharacteristic(TreadmillDataCharacteristic);
+    console.log("[BT] Found Treadmill Data Characteristic");
+
+    console.log("[BT] Looking for Training Status (0x2ad3)...");
+    trainingStatus = await fitnessMachine.getCharacteristic(TrainingStatusCharacteristic);
+    console.log("[BT] Found Training Status Characteristic");
+
+    // Fitness Machine Status is optional
+    try {
+      console.log("[BT] Looking for Fitness Machine Status (0x2ada)...");
+      fitnessMachineStatus = await fitnessMachine.getCharacteristic(FitnessMachineStatusCharacteristic);
+      console.log("[BT] Found Fitness Machine Status Characteristic");
+    } catch {
+      console.warn("[BT] Fitness Machine Status characteristic not available");
+    }
+
+    // Control Point is optional
+    try {
+      console.log("[BT] Looking for Control Point (0x2ad9)...");
+      controlPoint = await fitnessMachine.getCharacteristic(FitnessMachineControlPointCharacteristic);
+      console.log("[BT] Found Control Point Characteristic - treadmill control available!");
+    } catch {
+      console.warn("[BT] Control Point characteristic not available - no treadmill control");
+    }
+
+    // Feature characteristic is optional
+    try {
+      console.log("[BT] Looking for Feature (0x2acc)...");
+      feature = await fitnessMachine.getCharacteristic(FitnessMachineFeatureCharacteristic);
+      console.log("[BT] Found Feature Characteristic");
+    } catch {
+      console.warn("[BT] Feature characteristic not available");
+    }
   } catch (e) {
-    console.error(e);
-    throw new Error(
-      "failed to discover fitness machine service and associated characteristics"
-    );
+    console.error("[BT] Failed to discover Fitness Machine Service:", e);
+    throw new Error("failed to discover fitness machine service and associated characteristics");
   }
+
+  console.log("[BT] Service discovery complete!");
+  console.log("[BT] Summary:");
+  console.log("[BT]   Generic Access:", !!genericAccess);
+  console.log("[BT]   Treadmill Data:", !!treadmillData);
+  console.log("[BT]   Training Status:", !!trainingStatus);
+  console.log("[BT]   Fitness Machine Status:", !!fitnessMachineStatus);
+  console.log("[BT]   Control Point:", !!controlPoint);
+  console.log("[BT]   Feature:", !!feature);
 
   return {
     genericAccess: {
-      service: genericAccess,
-      deviceName,
+      service: genericAccess!,
+      deviceName: deviceName!,
     },
     fitnessMachine: {
       service: fitnessMachine,
       treadmillData,
       trainingStatus,
-      fitnessMachineStatus,
+      fitnessMachineStatus: fitnessMachineStatus!,
+      controlPoint,
+      feature,
     },
+  };
+}
+
+// FTMS Control Point Op Codes (FTMS 4.16.2)
+export const ControlPointOpCode = {
+  REQUEST_CONTROL: 0x00,
+  RESET: 0x01,
+  SET_TARGET_SPEED: 0x02,
+  SET_TARGET_INCLINATION: 0x03,
+  START_OR_RESUME: 0x07,
+  STOP_OR_PAUSE: 0x08,
+  RESPONSE_CODE: 0x80,
+} as const;
+
+// FTMS Control Point Result Codes
+export const ControlPointResult = {
+  SUCCESS: 0x01,
+  OP_CODE_NOT_SUPPORTED: 0x02,
+  INVALID_PARAMETER: 0x03,
+  OPERATION_FAILED: 0x04,
+  CONTROL_NOT_PERMITTED: 0x05,
+} as const;
+
+// Build control point commands
+export function buildRequestControlCommand(): Uint8Array {
+  return new Uint8Array([ControlPointOpCode.REQUEST_CONTROL]);
+}
+
+export function buildStartCommand(): Uint8Array {
+  return new Uint8Array([ControlPointOpCode.START_OR_RESUME]);
+}
+
+export function buildStopCommand(): Uint8Array {
+  // 0x01 = Stop, 0x02 = Pause
+  return new Uint8Array([ControlPointOpCode.STOP_OR_PAUSE, 0x01]);
+}
+
+export function buildPauseCommand(): Uint8Array {
+  return new Uint8Array([ControlPointOpCode.STOP_OR_PAUSE, 0x02]);
+}
+
+export function buildSetSpeedCommand(speedKmph: number): Uint8Array {
+  // Speed in 1/100 km/h as uint16 little-endian
+  const speedValue = Math.round(speedKmph * 100);
+  return new Uint8Array([
+    ControlPointOpCode.SET_TARGET_SPEED,
+    speedValue & 0xff,
+    (speedValue >> 8) & 0xff,
+  ]);
+}
+
+export function parseControlPointResponse(
+  data: DataView
+): { opCode: number; requestOpCode: number; result: number } {
+  return {
+    opCode: data.getUint8(0),
+    requestOpCode: data.getUint8(1),
+    result: data.getUint8(2),
   };
 }
 

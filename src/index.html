@@ -3,9 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>🏃‍♂️ Treadmill Controller</title>
+    <meta name="theme-color" content="#333333" />
+    <meta name="description" content="Control and monitor your Bluetooth treadmill" />
+    <title>Treadmill Controller</title>
 
     <link rel="stylesheet" href="style.css" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="icon-192.svg" />
   </head>
   <body>
     <h1>Treadmill Controller</h1>
@@ -41,24 +45,45 @@
     <main>
       <section id="controls">
         <div id="controls-device">
+          <span id="connection-status" class="status-disconnected">●</span>
           Connected to:
           <strong><span id="controls-device-name">nothing</span></strong>
         </div>
+        <div id="connection-message" class="hidden"></div>
         <div id="controls-connection">
           <button id="controls-connect" disabled>Connect</button>
           <button id="controls-disconnect" class="hidden" disabled>
             Disconnect
           </button>
+          <button id="controls-cancel-reconnect" class="hidden">
+            Cancel Reconnect
+          </button>
         </div>
       </section>
       <section id="data" class="hidden">
-        <aside>
-          Reported kcal burnt is directly from the device, so it is inaccurate.
-          A calculator will be implemented to get more accurate kcal estimates.
-        </aside>
+        <div id="data-controls" class="hidden">
+          <div id="actual-speed-display">
+            <span id="data-current-speed">0</span>
+            <span class="speed-unit">mph</span>
+          </div>
+          <div id="speed-control">
+            <button id="speed-decrease-large" class="speed-btn speed-btn-small">-.5</button>
+            <button id="speed-decrease" class="speed-btn">-</button>
+            <div id="target-speed-display">
+              <span class="target-label">Target:</span>
+              <span id="data-target-speed">0.6</span>
+              <span class="speed-unit-small">mph</span>
+            </div>
+            <button id="speed-increase" class="speed-btn">+</button>
+            <button id="speed-increase-large" class="speed-btn speed-btn-small">+.5</button>
+          </div>
+          <div id="workout-control">
+            <button id="control-start">Start</button>
+            <button id="control-stop" class="hidden">Stop</button>
+          </div>
+        </div>
         <div id="data-current">
           <div>Status: <span id="data-current-status">Idle</span></div>
-          <div>Current speed: <span id="data-current-speed">0</span> mph</div>
           <div>
             Total distance:
             <span id="data-current-distance">0</span> miles
@@ -69,8 +94,90 @@
             <span id="data-current-kcal">0</span> kcal
           </div>
         </div>
+        <aside id="calorie-note">
+          Calorie estimate uses your weight if set in Settings, otherwise shows device estimate.
+        </aside>
+      </section>
+      <section id="history">
+        <h2>
+          <button id="history-toggle" aria-expanded="false">Session History ▶</button>
+        </h2>
+        <div id="history-content" class="hidden">
+          <div id="history-actions">
+            <button id="history-refresh">Refresh</button>
+            <button id="history-delete-selected" disabled>Delete Selected</button>
+            <button id="history-export-csv">Export CSV</button>
+            <button id="history-export-json">Export JSON</button>
+          </div>
+          <div id="history-list">
+            <p id="history-empty">No sessions recorded yet.</p>
+          </div>
+          <div id="history-detail" class="hidden">
+            <button id="history-detail-close">← Back to list</button>
+            <div id="history-detail-content"></div>
+          </div>
+        </div>
+      </section>
+      <section id="goals">
+        <h2>
+          <button id="goals-toggle" aria-expanded="false">Workout Goals ▶</button>
+        </h2>
+        <div id="goals-content" class="hidden">
+          <div id="goals-form">
+            <label>
+              Distance goal (miles):
+              <input type="number" id="goal-distance" min="0" step="0.1" placeholder="e.g. 1.5">
+            </label>
+            <label>
+              Duration goal (minutes):
+              <input type="number" id="goal-duration" min="0" step="1" placeholder="e.g. 30">
+            </label>
+            <button id="goals-clear">Clear Goals</button>
+          </div>
+          <div id="goals-progress" class="hidden">
+            <div id="goal-distance-progress">
+              <span>Distance: <span id="goal-distance-current">0</span> / <span id="goal-distance-target">0</span> miles</span>
+              <progress id="goal-distance-bar" value="0" max="100"></progress>
+            </div>
+            <div id="goal-duration-progress">
+              <span>Duration: <span id="goal-duration-current">0:00</span> / <span id="goal-duration-target">0:00</span></span>
+              <progress id="goal-duration-bar" value="0" max="100"></progress>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="summary">
+        <h2>
+          <button id="summary-toggle" aria-expanded="false">Summary Charts ▶</button>
+        </h2>
+        <div id="summary-content" class="hidden">
+          <div id="summary-period">
+            <button id="summary-weekly" class="active">Weekly</button>
+            <button id="summary-monthly">Monthly</button>
+          </div>
+          <div id="summary-stats">
+            <div>Total sessions: <strong id="summary-sessions">0</strong></div>
+            <div>Total distance: <strong id="summary-distance">0</strong> miles</div>
+            <div>Total time: <strong id="summary-time">0:00</strong></div>
+          </div>
+          <div class="chart-container" id="summary-chart"></div>
+        </div>
+      </section>
+      <section id="settings">
+        <h2>
+          <button id="settings-toggle" aria-expanded="false">Settings ▶</button>
+        </h2>
+        <div id="settings-content" class="hidden">
+          <label>
+            Body weight (lbs):
+            <input type="number" id="settings-weight" min="0" step="1" placeholder="e.g. 150">
+          </label>
+          <p id="settings-calorie-note">Weight is used for more accurate calorie calculations.</p>
+          <button id="settings-save">Save Settings</button>
+        </div>
       </section>
     </main>
+    <div id="toast-container"></div>
   </body>
   <script src="index.ts" type="module"></script>
 </html>

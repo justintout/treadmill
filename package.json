@@ -5,17 +5,22 @@
   "source": "src/index.html",
   "scripts": {
     "start": "parcel",
+    "build": "parcel build --public-url ./",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "Justin Tout",
   "license": "MIT",
   "devDependencies": {
+    "@parcel/packager-raw-url": "^2.11.0",
+    "@parcel/transformer-webmanifest": "^2.11.0",
     "@types/web-bluetooth": "^0.0.20",
+    "buffer": "^6.0.3",
     "parcel": "^2.11.0",
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "dexie": "^3.2.5"
+    "dexie": "^3.2.5",
+    "echarts": "^6.0.0"
   }
 }
