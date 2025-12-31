@@ -50,13 +50,10 @@ const historyDetailID = "history-detail";
 const historyDetailCloseID = "history-detail-close";
 const historyDetailContentID = "history-detail-content";
 
-// Goals elements
-const goalsToggleID = "goals-toggle";
-const goalsContentID = "goals-content";
+// Goals elements (inputs are now in Settings)
 const goalDistanceInputID = "goal-distance";
 const goalDurationInputID = "goal-duration";
-const goalsClearID = "goals-clear";
-const goalsProgressID = "goals-progress";
+const goalsProgressID = "goals-section";
 const goalDistanceCurrentID = "goal-distance-current";
 const goalDistanceTargetID = "goal-distance-target";
 const goalDistanceBarID = "goal-distance-bar";
@@ -119,11 +116,8 @@ const historyDetail = findElement<HTMLDivElement>(historyDetailID);
 const historyDetailClose = findElement<HTMLButtonElement>(historyDetailCloseID);
 const historyDetailContent = findElement<HTMLDivElement>(historyDetailContentID);
 
-const goalsToggle = findElement<HTMLButtonElement>(goalsToggleID);
-const goalsContent = findElement<HTMLDivElement>(goalsContentID);
 const goalDistanceInput = findElement<HTMLInputElement>(goalDistanceInputID);
 const goalDurationInput = findElement<HTMLInputElement>(goalDurationInputID);
-const goalsClear = findElement<HTMLButtonElement>(goalsClearID);
 const goalsProgress = findElement<HTMLDivElement>(goalsProgressID);
 const goalDistanceCurrent = findElement<HTMLSpanElement>(goalDistanceCurrentID);
 const goalDistanceTarget = findElement<HTMLSpanElement>(goalDistanceTargetID);
@@ -434,16 +428,16 @@ function updateGoalsVisibility() {
   const hasDistanceGoal = currentSettings.goalDistanceMiles !== null && currentSettings.goalDistanceMiles > 0;
   const hasDurationGoal = currentSettings.goalDurationMinutes !== null && currentSettings.goalDurationMinutes > 0;
 
-  if (hasDistanceGoal || hasDurationGoal) {
-    goalsProgress.classList.remove("hidden");
-    if (hasDistanceGoal) {
-      goalDistanceTarget.textContent = currentSettings.goalDistanceMiles!.toFixed(1);
-    }
-    if (hasDurationGoal) {
-      goalDurationTarget.textContent = formatMinutes(currentSettings.goalDurationMinutes!);
-    }
+  // Update target display values
+  if (hasDistanceGoal) {
+    goalDistanceTarget.textContent = currentSettings.goalDistanceMiles!.toFixed(1);
   } else {
-    goalsProgress.classList.add("hidden");
+    goalDistanceTarget.textContent = "0";
+  }
+  if (hasDurationGoal) {
+    goalDurationTarget.textContent = formatMinutes(currentSettings.goalDurationMinutes!);
+  } else {
+    goalDurationTarget.textContent = "0:00";
   }
 }
 
@@ -896,13 +890,13 @@ function idle() {
 
   // Set up collapsible sections
   setupToggle(historyToggle, historyContent);
-  setupToggle(goalsToggle, goalsContent);
   setupToggle(settingsToggle, settingsContent);
   setupToggle(summaryToggle, summaryContent);
 
   // History handlers
   historyToggle.addEventListener("click", () => {
-    if (historyContent.classList.contains("hidden")) {
+    // Check if NOT hidden (was just opened by setupToggle)
+    if (!historyContent.classList.contains("hidden")) {
       renderSessionList();
     }
   });
@@ -921,7 +915,6 @@ function idle() {
   // Goals handlers
   goalDistanceInput.addEventListener("change", saveGoals);
   goalDurationInput.addEventListener("change", saveGoals);
-  goalsClear.addEventListener("click", clearGoals);
   updateGoalsFromSettings();
 
   // Settings handlers
@@ -930,7 +923,8 @@ function idle() {
 
   // Summary handlers
   summaryToggle.addEventListener("click", () => {
-    if (summaryContent.classList.contains("hidden")) {
+    // Check if NOT hidden (was just opened by setupToggle)
+    if (!summaryContent.classList.contains("hidden")) {
       loadSummaryChart();
     }
   });

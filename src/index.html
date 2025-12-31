@@ -61,9 +61,9 @@
         </div>
       </section>
       <section id="data" class="hidden">
-        <div id="wake-notice" class="notice">
+        <aside>
           Wake the treadmill with the remote before using these controls.
-        </div>
+        </aside>
         <div id="data-controls" class="hidden">
           <div id="actual-speed-display">
             <span id="data-current-speed">0</span>
@@ -100,6 +100,22 @@
         <aside id="calorie-note">
           Calorie estimate uses your weight if set in Settings, otherwise shows device estimate.
         </aside>
+        <div id="goals-section">
+          <div class="goal-row">
+            <input type="number" id="goal-distance" min="0" step="0.1" placeholder="Goal">
+            <div class="goal-progress">
+              <span><span id="goal-distance-current">0</span> / <span id="goal-distance-target">0</span> mi</span>
+              <progress id="goal-distance-bar" value="0" max="100"></progress>
+            </div>
+          </div>
+          <div class="goal-row">
+            <input type="number" id="goal-duration" min="0" step="1" placeholder="Goal">
+            <div class="goal-progress">
+              <span><span id="goal-duration-current">0:00</span> / <span id="goal-duration-target">0:00</span></span>
+              <progress id="goal-duration-bar" value="0" max="100"></progress>
+            </div>
+          </div>
+        </div>
       </section>
       <section id="history">
         <h2>
@@ -118,34 +134,6 @@
           <div id="history-detail" class="hidden">
             <button id="history-detail-close">← Back to list</button>
             <div id="history-detail-content"></div>
-          </div>
-        </div>
-      </section>
-      <section id="goals">
-        <h2>
-          <button id="goals-toggle" aria-expanded="false">Workout Goals ▶</button>
-        </h2>
-        <div id="goals-content" class="hidden">
-          <div id="goals-form">
-            <label>
-              Distance goal (miles):
-              <input type="number" id="goal-distance" min="0" step="0.1" placeholder="e.g. 1.5">
-            </label>
-            <label>
-              Duration goal (minutes):
-              <input type="number" id="goal-duration" min="0" step="1" placeholder="e.g. 30">
-            </label>
-            <button id="goals-clear">Clear Goals</button>
-          </div>
-          <div id="goals-progress" class="hidden">
-            <div id="goal-distance-progress">
-              <span>Distance: <span id="goal-distance-current">0</span> / <span id="goal-distance-target">0</span> miles</span>
-              <progress id="goal-distance-bar" value="0" max="100"></progress>
-            </div>
-            <div id="goal-duration-progress">
-              <span>Duration: <span id="goal-duration-current">0:00</span> / <span id="goal-duration-target">0:00</span></span>
-              <progress id="goal-duration-bar" value="0" max="100"></progress>
-            </div>
           </div>
         </div>
       </section>
