@@ -324,6 +324,15 @@ aside {
   margin: 0.5rem 1rem;
 }
 
+.notice {
+  padding: 0.75rem 1rem;
+  background: #E3F2FD;
+  color: #1565C0;
+  border-left: 4px solid #1565C0;
+  margin: 0.5rem 1rem;
+  font-size: 0.9rem;
+}
+
 #connection-status {
   font-size: 1.2rem;
   margin-right: 0.25rem;

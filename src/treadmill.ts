@@ -192,9 +192,6 @@ export class Treadmill {
     );
     this.profile.fitnessMachine.trainingStatus.startNotifications();
 
-    // Try to wake the machine by reading feature characteristic
-    await this.readFeature();
-
     this.setConnectionState("connected");
     this.wasConnected = true;
     this.reconnectAttempts = 0;
@@ -320,28 +317,6 @@ export class Treadmill {
     return result;
   }
 
-  async reset(): Promise<boolean> {
-    console.log("[CP] Sending RESET command (may wake machine)...");
-    const result = await this.writeControlPoint(new Uint8Array([0x01])); // RESET opcode
-    console.log("[CP] Reset result:", result);
-    return result;
-  }
-
-  async readFeature(): Promise<void> {
-    const feature = this.profile?.fitnessMachine.feature;
-    if (!feature) {
-      console.warn("[BT] Feature characteristic not available");
-      return;
-    }
-    try {
-      console.log("[BT] Reading Feature characteristic (may wake machine)...");
-      const value = await feature.readValue();
-      console.log("[BT] Feature value:", new Uint8Array(value.buffer));
-    } catch (e) {
-      console.warn("[BT] Could not read Feature:", e);
-    }
-  }
-
   async start(): Promise<boolean> {
     console.log("[CP] Starting workout...");
 
@@ -370,11 +345,6 @@ export class Treadmill {
         console.warn("[CP] Could not subscribe to indications:", e);
       }
     }
-
-    // Try to wake the machine first with a reset
-    console.log("[CP] Attempting to wake machine with RESET...");
-    await this.reset();
-    await new Promise(resolve => setTimeout(resolve, 300));
 
     // Request control
     const hasControl = await this.requestControl();
